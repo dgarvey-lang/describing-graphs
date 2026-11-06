@@ -231,14 +231,14 @@
         <h2 style="margin:0;flex:1">Practice</h2>
         <button class="primary" id="pNew">New function</button>
       </div>
-      <p class="hint" style="margin-top:0">Use the graph and the Calculator buttons. Round to the nearest hundredth. Type points as (x, y) and separate answers with commas. Type <b>none</b> if there aren’t any.</p>
+      <p class="hint" style="margin-top:0">Use the graph and the Calculator buttons. Round to the nearest hundredth. Type points as (x, y), intervals as (a, b) using <b>inf</b> or ∞ for infinity, and separate answers with commas. Type <b>none</b> if there aren’t any.</p>
       <div id="questions"></div>
       <div class="row">
         <span class="scoreline" id="pScore"></span>
         <span class="spacer" style="flex:1"></span>
         <button id="pReveal" disabled title="Check every answer once to unlock">Show answers on graph</button>
       </div>
-      <div class="banner" id="pBanner" hidden>All 6 correct! Press <b>New function</b> to try another.</div>
+      <div class="banner" id="pBanner" hidden>All 8 correct! Press <b>New function</b> to try another.</div>
     </div>
   </div>
 </div>
@@ -964,6 +964,8 @@ const QUESTIONS = [
   { id: 'tp', prompt: 'What are the turning points?', small: 'as (x, y), or none', ph: 'e.g. (-1.15, 3.08), (1.15, -3.08)', hint: 'A turning point is the top of a hill or the bottom of a valley. Use Calculator → maximum or minimum to find each one.' },
   { id: 'mx', prompt: 'Relative maximum(s)', small: 'the y-value only, or none', ph: 'e.g. 3.08', hint: 'Find the top of each hill. Try Calculator → maximum.' },
   { id: 'mn', prompt: 'Relative minimum(s)', small: 'the y-value only, or none', ph: 'e.g. -3.08', hint: 'Find the bottom of each valley. Try Calculator → minimum.' },
+  { id: 'inc', prompt: 'Where is <i>f</i> increasing?', small: 'as interval(s), or none', ph: 'e.g. (-inf, -1.15), (1.15, inf)', hint: 'Read left to right: where does the graph go up? The intervals start and end at the x-values of the turning points.' },
+  { id: 'dec', prompt: 'Where is <i>f</i> decreasing?', small: 'as interval(s), or none', ph: 'e.g. (-1.15, 1.15)', hint: 'Read left to right: where does the graph go down? The intervals start and end at the x-values of the turning points.' },
 ];
 document.getElementById('questions').innerHTML = QUESTIONS.map((q, i) => `
   <div class="q" id="q-${q.id}">
@@ -1127,6 +1129,38 @@ function checkTurning(s) {
   if (missing.length) return { cls: 'almost', msg: `Correct so far, but there ${missing.length === 1 ? 'is 1 more turning point' : 'are ' + missing.length + ' more'}.` };
   return { cls: 'right', msg: '✓ Correct!' };
 }
+function parseIntervals(s) {
+  const t = s.toLowerCase().replace(/[−–—]/g, '-').replace(/infinity|inf|∞|oo/g, ' I ').replace(/\bu\b|∪|and/g, ',');
+  const toks = t.match(/[-+]?\s*I|-?(?:\d+\.?\d*|\.\d+)/g) || [];
+  return toks.map(k => { k = k.replace(/\s+/g, ''); return k.endsWith('I') ? (k.startsWith('-') ? -Infinity : Infinity) : Number(k); });
+}
+function checkIntervals(s, kind) {
+  const exp = kind === 'inc' ? prob.I.inc : prob.I.dec, opp = kind === 'inc' ? prob.I.dec : prob.I.inc;
+  const word = kind === 'inc' ? 'increasing' : 'decreasing', oppWord = kind === 'inc' ? 'decreasing' : 'increasing';
+  if (isNone(s)) return exp.length ? { cls: 'wrong', msg: `✗ The graph is ${word} somewhere. Look again from left to right.` } : { cls: 'right', msg: `✓ Correct! The graph is never ${word}.` };
+  const n = parseIntervals(s);
+  if (!n.length) return { cls: 'almost', msg: 'Type each interval as (a, b), using inf for infinity, or type none.' };
+  if (!exp.length) return { cls: 'wrong', msg: `✗ This graph is never ${word}. Type none.` };
+  if (n.length % 2) return { cls: 'almost', msg: 'Write each interval with two endpoints, like (a, b). Use -inf or inf for the ends.' };
+  const ivs = []; for (let i = 0; i < n.length; i += 2) ivs.push([n[i], n[i + 1]]);
+  const same = (a, b, tol) => (a === b) || (isFinite(a) && isFinite(b) && Math.abs(a - b) <= tol);
+  const match = (iv, e, tol) => same(iv[0], e[0], tol) && same(iv[1], e[1], tol);
+  const ys = prob.I.turning.map(t => t.y), zs = prob.I.zeros.map(z => z.x);
+  for (const iv of ivs) {
+    if (exp.some(e => match(iv, e, 0.011))) continue;
+    if (opp.some(e => match(iv, e, 0.011))) return { cls: 'wrong', msg: `✗ The graph is ${oppWord} on that interval, not ${word}.` };
+    if (iv.some(v => isFinite(v) && ys.some(y => Math.abs(y - v) <= 0.011) && !prob.I.turning.some(t => Math.abs(t.x - v) <= 0.011)))
+      return { cls: 'almost', msg: 'Intervals use <i>x</i>-values. It looks like you used a <i>y</i>-value from a turning point.' };
+    if (iv.some(v => isFinite(v) && zs.some(z => Math.abs(z - v) <= 0.011) && !prob.I.turning.some(t => Math.abs(t.x - v) <= 0.011)))
+      return { cls: 'wrong', msg: '✗ The intervals change at the turning points, not at the zeros.' };
+    if (iv[0] > iv[1]) return { cls: 'almost', msg: 'Write each interval from left to right: the smaller number comes first.' };
+    if (exp.some(e => match(iv, e, 0.3))) return { cls: 'almost', msg: 'Close! Round the endpoints to the nearest hundredth. Calculator → maximum or minimum gives exact x-values.' };
+    return { cls: 'wrong', msg: `✗ The graph is not ${word} on all of (${fmt(iv[0])}, ${fmt(iv[1])}).` };
+  }
+  const missing = exp.filter(e => !ivs.some(iv => match(iv, e, 0.011)));
+  if (missing.length) return { cls: 'almost', msg: `Correct so far, but there ${missing.length === 1 ? 'is 1 more interval' : 'are ' + missing.length + ' more intervals'} where it is ${word}.` };
+  return { cls: 'right', msg: '✓ Correct!' };
+}
 function checkQ(id) {
   const s = document.getElementById('in-' + id).value;
   if (!s.trim()) return;
@@ -1135,7 +1169,9 @@ function checkQ(id) {
     : id === 'zs' ? checkZeros(s)
     : id === 'nt' ? checkCount(s, I.turning.length, 'turning')
     : id === 'tp' ? checkTurning(s)
-    : id === 'mx' ? checkPoints(s, 'max') : checkPoints(s, 'min');
+    : id === 'mx' ? checkPoints(s, 'max')
+    : id === 'mn' ? checkPoints(s, 'min')
+    : checkIntervals(s, id);
   const q = QUESTIONS.find(q => q.id === id);
   const fb = document.getElementById('fb-' + id);
   fb.className = 'fb ' + r.cls;
