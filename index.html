@@ -184,6 +184,7 @@
         <div class="seg" role="group" aria-label="Form">
           <button id="modeF" aria-pressed="true">Factored form</button>
           <button id="modeS" aria-pressed="false">Standard form</button>
+          <button id="modeT" aria-pressed="false">Type an equation</button>
         </div>
       </div>
       <div class="row">
@@ -203,6 +204,16 @@
         </div>
         <label class="chk"><input type="checkbox" id="quadBox"> <span>Multiply by (<i>x</i>² + 1). This factor adds 2 to the degree but has <b>no real zeros</b>.</span></label>
         <p class="hint">Tip: drag the purple dots on the graph to move the zeros.</p>
+      </div>
+
+      <div id="panelT" hidden>
+        <form id="eqForm" class="row" style="margin-top:0" autocomplete="off">
+          <label for="eqInput" style="font-size:.92rem"><i>f</i>(<i>x</i>) =</label>
+          <input type="text" id="eqInput" spellcheck="false" placeholder="e.g. x^3 - 4x + 1" style="flex:1 1 180px;min-width:0;font-size:1.05rem" aria-describedby="eqHelp eqMsg">
+          <button type="submit" class="primary">Graph it</button>
+        </form>
+        <div class="fb" id="eqMsg" aria-live="polite" style="font-size:.92rem;min-height:1.2em"></div>
+        <p class="hint" id="eqHelp">Use <b>^</b> for exponents. You can type standard form like <code>2x^3 - 5x^2 + 3</code>, factored form like <code>-(x+1)(x-2)^2</code>, or a mix like <code>0.5x(x^2 - 9)</code>. Fractions like <code>1/2x^2</code> work too. Up to degree 8.</p>
       </div>
 
       <div id="panelS" hidden>
@@ -848,6 +859,110 @@ tabs.practice.onclick = () => showTab('practice');
    EXPLORE
    ================================================================ */
 const MAX_DEG = 5;
+const MAX_TYPED_DEG = 8;
+
+/* Parse a typed polynomial into coefficients [a0, a1, ...]. Throws Error with a student-friendly message. */
+function parsePoly(src) {
+  let s = String(src)
+    .replace(/[−–—]/g, '-').replace(/[·×∙]/g, '*').replace(/÷/g, '/')
+    .replace(/²/g, '^2').replace(/³/g, '^3').replace(/⁴/g, '^4').replace(/⁵/g, '^5')
+    .replace(/\*\*/g, '^').replace(/[\[{]/g, '(').replace(/[\]}]/g, ')')
+    .replace(/X/g, 'x').trim();
+  s = s.replace(/^\s*(?:f\s*\(\s*x\s*\)|y|p\s*\(\s*x\s*\))\s*=/i, '');
+  if (s.includes('=')) throw new Error('Type only the right side of the equation, after the = sign.');
+  const toks = [];
+  const re = /\s*(?:(\d+\.?\d*|\.\d+)|([x])|([-+*/^()]))/y;
+  let pos = 0;
+  while (pos < s.length) {
+    if (/^\s*$/.test(s.slice(pos))) break;
+    re.lastIndex = pos;
+    const m = re.exec(s);
+    if (!m) {
+      const ch = s.slice(pos).trim()[0];
+      throw new Error(/[a-wyz]/i.test(ch) ? `Use x as the variable (found “${ch}”).` : `I don't understand the symbol “${ch}”.`);
+    }
+    pos = re.lastIndex;
+    toks.push(m[1] != null ? { t: 'n', v: parseFloat(m[1]) } : m[2] ? { t: 'x' } : { t: m[3] });
+  }
+  if (!toks.length) throw new Error('Type a polynomial, like x^3 - 4x.');
+  let i = 0;
+  const peek = () => toks[i], next = () => toks[i++];
+  const add = (a, b) => { const r = []; for (let k = 0; k < Math.max(a.length, b.length); k++) r.push((a[k] || 0) + (b[k] || 0)); return r; };
+  const scale = (a, k) => a.map(v => v * k);
+  const deg = a => Poly.trim(a).length - 1;
+  const isConst = a => deg(a) === 0;
+  function expr() {
+    let r = term();
+    while (peek() && (peek().t === '+' || peek().t === '-')) {
+      const op = next().t, b = term();
+      r = add(r, op === '+' ? b : scale(b, -1));
+    }
+    return r;
+  }
+  function term() {
+    let r = power();
+    for (;;) {
+      const t = peek();
+      if (!t) break;
+      if (t.t === '*' || t.t === '/') {
+        next();
+        const b = power();
+        if (t.t === '*') r = Poly.mul(r, b);
+        else {
+          if (!isConst(b)) throw new Error('You can only divide by a number, not by an expression with x.');
+          const d = Poly.trim(b)[0];
+          if (d === 0) throw new Error("You can't divide by 0.");
+          r = scale(r, 1 / d);
+        }
+      } else if (t.t === 'n' || t.t === 'x' || t.t === '(') {
+        r = Poly.mul(r, power()); // implied multiplication: 3x, 2(x+1), (x-1)(x+2)
+      } else break;
+      if (deg(r) > MAX_TYPED_DEG) throw new Error(`That is more than degree ${MAX_TYPED_DEG}. Try a smaller polynomial.`);
+    }
+    return r;
+  }
+  function power() {
+    const t = peek();
+    if (t && (t.t === '-' || t.t === '+')) { next(); const r = power(); return t.t === '-' ? scale(r, -1) : r; }
+    let base = primary();
+    while (peek() && peek().t === '^') {
+      next();
+      let sign = 1;
+      if (peek() && peek().t === '-') { next(); sign = -1; }
+      const e = peek();
+      let ev;
+      if (e && e.t === 'n') { next(); ev = e.v; }
+      else if (e && e.t === '(') { next(); const inner = expr(); if (!peek() || next().t !== ')') throw new Error('A “(” is missing its “)”.'); if (!isConst(inner)) throw new Error('Exponents must be whole numbers, not expressions with x.'); ev = Poly.trim(inner)[0]; }
+      else throw new Error('Put a whole number after ^.');
+      ev *= sign;
+      if (!Number.isInteger(ev) || ev < 0) throw new Error('Exponents must be whole numbers 0, 1, 2, … (no negatives or decimals).');
+      if (deg(base) * ev > MAX_TYPED_DEG) throw new Error(`That is more than degree ${MAX_TYPED_DEG}. Try a smaller polynomial.`);
+      let r = [1];
+      for (let k = 0; k < ev; k++) r = Poly.mul(r, base);
+      base = r;
+    }
+    return base;
+  }
+  function primary() {
+    const t = next();
+    if (!t) throw new Error('The equation ends too soon. Is something missing at the end?');
+    if (t.t === 'n') return [t.v];
+    if (t.t === 'x') return [0, 1];
+    if (t.t === '(') {
+      if (peek() && peek().t === ')') throw new Error('There is an empty ( ).');
+      const r = expr();
+      if (!peek() || next().t !== ')') throw new Error('A “(” is missing its “)”.');
+      return r;
+    }
+    if (t.t === ')') throw new Error('There is an extra “)” or something missing before it.');
+    throw new Error(`Something is missing before “${t.t}”.`);
+  }
+  const r = expr();
+  if (i < toks.length) throw new Error(toks[i].t === ')' ? 'There is an extra “)”.' : `I don't understand “${toks[i].t}” there.`);
+  const c = Poly.trim(r.map(v => tidy(Math.round(v * 1e10) / 1e10)));
+  if (!c.every(isFinite)) throw new Error('Those numbers are too large.');
+  return c;
+}
 const PRESETS = [
   { label: 'x³ − 4x · 3 zeros, 2 turning points', a: 1, zeros: [[-2, 1], [0, 1], [2, 1]] },
   { label: '(x + 2)(x − 1)² · a zero that bounces', a: 1, zeros: [[-2, 1], [1, 2]] },
@@ -863,6 +978,7 @@ const E = {
   mode: 'F',
   F: { a: 1, zeros: [{ x: -2, m: 1 }, { x: 0, m: 1 }, { x: 2, m: 1 }], quad: false },
   S: [0, -4, 0, 1, 0, 0], // a0..a5
+  T: { text: '', c: null },
   done: new Set(),
 };
 const eRoot = document.getElementById('eGraphCard');
@@ -893,15 +1009,55 @@ function setMode(m, silent) {
   if (m === 'S' && E.mode === 'F') {
     const c = expandF(E.F); E.S = [0, 0, 0, 0, 0, 0].map((_, i) => tidy(Math.round((c[i] || 0) * 1e9) / 1e9));
   }
+  if (m === 'T' && E.mode !== 'T' && !E.T.c) {
+    const c = E.mode === 'F' ? expandF(E.F) : E.S;
+    E.T.c = Poly.trim(c.map(v => tidy(Math.round((v || 0) * 1e9) / 1e9)));
+    E.T.text = plainPoly(E.T.c);
+    eqInput.value = E.T.text;
+  }
   E.mode = m;
   document.getElementById('modeF').setAttribute('aria-pressed', String(m === 'F'));
   document.getElementById('modeS').setAttribute('aria-pressed', String(m === 'S'));
   document.getElementById('panelF').hidden = m !== 'F';
   document.getElementById('panelS').hidden = m !== 'S';
+  document.getElementById('panelT').hidden = m !== 'T';
+  document.getElementById('modeT').setAttribute('aria-pressed', String(m === 'T'));
   if (!silent) refresh({ fit: true });
+  if (m === 'T' && !silent) eqInput.focus();
 }
 document.getElementById('modeF').onclick = () => setMode('F');
 document.getElementById('modeS').onclick = () => setMode('S');
+document.getElementById('modeT').onclick = () => setMode('T');
+
+// typed equation
+const eqInput = document.getElementById('eqInput'), eqMsg = document.getElementById('eqMsg');
+function plainPoly(c) {
+  let out = '';
+  for (let i = c.length - 1; i >= 0; i--) {
+    const v = c[i]; if (v === 0 && c.length > 1) continue;
+    const a = Math.abs(v), num = (a === 1 && i > 0) ? '' : String(+a.toFixed(4));
+    const term = num + (i === 0 ? '' : i === 1 ? 'x' : 'x^' + i);
+    out += out ? (v < 0 ? ' - ' : ' + ') + term : (v < 0 ? '-' : '') + term;
+  }
+  return out || '0';
+}
+function graphTyped() {
+  const text = eqInput.value;
+  try {
+    const c = parsePoly(text);
+    E.T = { text, c };
+    const n = c.length - 1;
+    eqMsg.className = 'fb';
+    eqMsg.innerHTML = n === 0
+      ? 'That is a constant (degree 0): a flat line with no turning points.'
+      : `Graphed a degree ${n} polynomial.`;
+    refresh({ fit: true });
+  } catch (err) {
+    eqMsg.className = 'fb wrong';
+    eqMsg.textContent = err.message;
+  }
+}
+document.getElementById('eqForm').onsubmit = e => { e.preventDefault(); graphTyped(); };
 
 // leading coefficient
 const aSlider = document.getElementById('aSlider'), aOut = document.getElementById('aOut');
@@ -990,7 +1146,7 @@ function renderSummary(I) {
       <li><b>${I.turning.length}</b> turning point${I.turning.length === 1 ? '' : 's'}</li>
       <li class="c-max">Relative maximum: ${maxes.length ? maxes.map(t => `<b>${fmtPt(t.x, t.y)}</b>`).join(', ') : 'none'}</li>
       <li class="c-min">Relative minimum: ${mins.length ? mins.map(t => `<b>${fmtPt(t.x, t.y)}</b>`).join(', ') : 'none'}</li>
-      <li><span class="c-up">Increasing</span> on ${intervalText(I.inc)}<br><span class="c-down">Decreasing</span> on ${intervalText(I.dec)}</li>
+      <li>${n === 0 ? 'Neither increasing nor decreasing: the graph is flat (constant) everywhere.' : `<span class="c-up">Increasing</span> on ${intervalText(I.inc)}<br><span class="c-down">Decreasing</span> on ${intervalText(I.dec)}`}</li>
       ${n >= 1 ? `<li>End behavior: as <i>x</i> → ${MINUS}∞, <i>f</i>(<i>x</i>) → ${end(leftEnd)}; as <i>x</i> → ∞, <i>f</i>(<i>x</i>) → ${end(rightEnd)}</li>` : ''}
     </ul>`;
 }
@@ -1018,6 +1174,10 @@ function refresh({ fit = false, list = true, grid = true } = {}) {
     if (list) renderZeroList();
     document.getElementById('eEq').innerHTML = `<i>f</i>(<i>x</i>) = ${factoredHTML(E.F)}`;
     document.getElementById('eEq2').innerHTML = `Standard form: <span><i>f</i>(<i>x</i>) = ${standardHTML(c)}</span>`;
+  } else if (E.mode === 'T') {
+    c = E.T.c || [0, -4, 0, 1];
+    document.getElementById('eEq').innerHTML = `<i>f</i>(<i>x</i>) = ${standardHTML(c)}`;
+    document.getElementById('eEq2').innerHTML = '';
   } else {
     c = E.S.slice();
     if (grid) renderCoefGrid();

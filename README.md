@@ -3,6 +3,7 @@
 `index.html` is an interactive page for finding **real zeros, turning points, relative maximums, and relative minimums** of polynomial functions. Open it in any browser, or turn on **GitHub Pages** (Settings → Pages → Deploy from branch → `main`, root) to get a link you can share with students.
 
 ## Explore tab
+- **Type an equation:** students type any polynomial (up to degree 8) and press **Graph it**. The graph and the “What the graph shows” box then list the real zeros, relative maximum and minimum points, and the intervals where the function is increasing and decreasing. It accepts standard form (`2x^3 - 5x^2 + 3`), factored form (`-(x+1)(x-2)^2`), or a mix (`0.5x(x^2 - 9)`). A leading `y =` or `f(x) =` is fine. Typing mistakes get a plain-language message, such as a missing `)` or a variable other than *x*.
 - Build a polynomial in **factored form**: set the leading coefficient with a slider, drag the purple zeros along the x-axis, set each factor's multiplicity (×1, ×2, ×3), and add an (x² + 1) factor, which has no real zeros. You can also switch to **standard form** and type coefficients.
 - The curve is blue where it rises and orange where it falls, so turning points show up where the color changes. Zeros, relative maxima (▲), and relative minima (▼) are marked with coordinates.
 - **Calculator** buttons (zero, maximum, minimum) work like a TI-84: Left Bound, Right Bound, Guess. Bad bounds produce an error explaining why, such as no peak between the bounds.
