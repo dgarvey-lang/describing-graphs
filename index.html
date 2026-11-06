@@ -130,7 +130,7 @@
 <div class="wrap">
 <header>
   <h1>Polynomial Graph Explorer</h1>
-  <p>Find the real zeros, turning points, relative maximums, and relative minimums of a polynomial function.</p>
+  <p>Type a polynomial to see its zeros, turning points, relative maximums and minimums, and where it is increasing or decreasing.</p>
 </header>
 
 <div class="tabs" role="tablist">
@@ -140,11 +140,20 @@
 
 <!-- ======================= EXPLORE ======================= -->
 <section id="explore" role="tabpanel" aria-labelledby="tabExplore">
+<div class="card" style="margin-bottom:16px">
+  <form id="eqForm" class="row" style="margin:0" autocomplete="off">
+    <label for="eqInput" style="font-size:1.05rem"><i>f</i>(<i>x</i>) =</label>
+    <input type="text" id="eqInput" spellcheck="false" value="x^3 - 4x + 1" placeholder="e.g. x^3 - 4x + 1" style="flex:1 1 220px;min-width:0;font-size:1.1rem" aria-describedby="eqHelp eqMsg">
+    <button type="submit" class="primary">Graph it</button>
+  </form>
+  <div class="fb" id="eqMsg" aria-live="polite"></div>
+  <p class="hint" id="eqHelp">Use <b>^</b> for exponents. Standard form like <code>2x^3 - 5x^2 + 3</code>, factored form like <code>-(x+1)(x-2)^2</code>, or a mix like <code>0.5x(x^2 - 9)</code> all work. Up to degree 8.</p>
+</div>
+
 <div class="layout">
   <div class="stack">
     <div class="card" id="eGraphCard">
       <div class="eq" id="eEq"></div>
-      <div class="eq2" id="eEq2"></div>
       <div class="graphbox"><canvas id="eCanvas" tabindex="0" aria-label="Graph of the polynomial. Use the left and right arrow keys to trace along the curve."></canvas></div>
       <div class="legend">
         <span><i class="sw" style="background:var(--up)"></i>rising (increasing)</span>
@@ -154,11 +163,6 @@
         <span class="c-min">▼ relative minimum</span>
       </div>
       <div class="toolbar">
-        <span class="lbl">Calculator:</span>
-        <button class="calc-btn" data-kind="zero">zero</button>
-        <button class="calc-btn" data-kind="max">maximum</button>
-        <button class="calc-btn" data-kind="min">minimum</button>
-        <button class="calc-cancel" hidden>Cancel</button>
         <span class="spacer"></span>
         <button class="zoom-out" aria-label="Zoom out">−</button>
         <button class="zoom-in" aria-label="Zoom in">+</button>
@@ -166,107 +170,31 @@
       </div>
       <div class="status" aria-live="polite"></div>
       <div class="readout" aria-live="off"></div>
-      <div class="layers" aria-label="Show on graph">
-        <strong style="font-size:.9rem;color:var(--muted)">Show:</strong>
-        <label><input type="checkbox" id="lyZeros" checked> zeros</label>
-        <label><input type="checkbox" id="lyTurning" checked> max &amp; min</label>
-        <label><input type="checkbox" id="lyColors" checked> rising/falling colors</label>
-        <label><input type="checkbox" id="lyLabels" checked> coordinates</label>
-        <label><input type="checkbox" id="lySummary" checked> “What the graph shows” box</label>
-      </div>
     </div>
   </div>
 
   <div class="stack">
-    <div class="card">
-      <h2>Build a polynomial</h2>
-      <div class="row">
-        <div class="seg" role="group" aria-label="Form">
-          <button id="modeF" aria-pressed="true">Factored form</button>
-          <button id="modeS" aria-pressed="false">Standard form</button>
-          <button id="modeT" aria-pressed="false">Type an equation</button>
-        </div>
-      </div>
-      <div class="row">
-        <label for="preset" style="font-size:.92rem">Try an example:</label>
-        <select id="preset" style="flex:1 1 180px;min-width:0"></select>
-      </div>
-
-      <div id="panelF">
-        <div class="row">
-          <label for="aSlider">Leading coefficient <i>a</i> = <b id="aOut">1</b></label>
-          <input type="range" id="aSlider" min="-3" max="3" step="0.25" value="1">
-        </div>
-        <div id="zeroList"></div>
-        <div class="row">
-          <button id="addZero">+ Add a zero</button>
-          <span class="hint" id="degNote" style="margin:0"></span>
-        </div>
-        <label class="chk"><input type="checkbox" id="quadBox"> <span>Multiply by (<i>x</i>² + 1). This factor adds 2 to the degree but has <b>no real zeros</b>.</span></label>
-        <p class="hint">Tip: drag the purple dots on the graph to move the zeros.</p>
-      </div>
-
-      <div id="panelT" hidden>
-        <form id="eqForm" class="row" style="margin-top:0" autocomplete="off">
-          <label for="eqInput" style="font-size:.92rem"><i>f</i>(<i>x</i>) =</label>
-          <input type="text" id="eqInput" spellcheck="false" placeholder="e.g. x^3 - 4x + 1" style="flex:1 1 180px;min-width:0;font-size:1.05rem" aria-describedby="eqHelp eqMsg">
-          <button type="submit" class="primary">Graph it</button>
-        </form>
-        <div class="fb" id="eqMsg" aria-live="polite" style="font-size:.92rem;min-height:1.2em"></div>
-        <p class="hint" id="eqHelp">Use <b>^</b> for exponents. You can type standard form like <code>2x^3 - 5x^2 + 3</code>, factored form like <code>-(x+1)(x-2)^2</code>, or a mix like <code>0.5x(x^2 - 9)</code>. Fractions like <code>1/2x^2</code> work too. Up to degree 8.</p>
-      </div>
-
-      <div id="panelS" hidden>
-        <p class="hint" style="margin-top:0">Type the coefficients. Use 0 for a missing term.</p>
-        <div class="coefgrid" id="coefGrid"></div>
-      </div>
-    </div>
-
     <div class="card summary" id="summaryCard">
       <h2>What the graph shows</h2>
       <div id="summary"></div>
-    </div>
-
-    <div class="card">
-      <h2>Challenges</h2>
-      <p class="hint" style="margin-top:0">Change the function until each box gets a check.</p>
-      <ul class="challenges" id="challenges"></ul>
     </div>
 
     <details class="card">
       <summary>Key ideas</summary>
       <dl>
         <dt>Real zero (x-intercept)</dt>
-        <dd>An <i>x</i>-value where <i>f</i>(<i>x</i>) = 0. The graph crosses or touches the <i>x</i>-axis there.
-          A factor with an <b>odd</b> exponent crosses the axis. A factor with an <b>even</b> exponent touches it and bounces back.</dd>
+        <dd>An <i>x</i>-value where <i>f</i>(<i>x</i>) = 0. A factor with an <b>odd</b> exponent crosses the <i>x</i>-axis; an <b>even</b> exponent touches it and bounces back.</dd>
         <dt>Turning point</dt>
-        <dd>A point where the graph changes from rising to falling, or from falling to rising.</dd>
-        <dt>Relative maximum</dt>
-        <dd>A turning point that is the top of a “hill.” It is higher than the points near it, but it does not have to be the highest point on the whole graph.</dd>
-        <dt>Relative minimum</dt>
-        <dd>A turning point that is the bottom of a “valley.” It is lower than the points near it.</dd>
+        <dd>A point (<i>x</i>, <i>y</i>) where the graph changes from rising to falling, or from falling to rising.</dd>
+        <dt>Relative maximum / minimum</dt>
+        <dd>The <i>y</i>-value at the top of a “hill” (maximum) or the bottom of a “valley” (minimum).</dd>
         <dt>How many?</dt>
         <dd>A polynomial of degree <i>n</i> has <b>at most <i>n</i> real zeros</b> and <b>at most <i>n</i> − 1 turning points</b>.</dd>
-        <dt>Writing answers</dt>
-        <dd>Write a relative max or min as a point (<i>x</i>, <i>y</i>). The relative maximum <em>value</em> is the <i>y</i>-coordinate.</dd>
       </dl>
-    </details>
-
-    <details class="card">
-      <summary>On a TI-84 graphing calculator</summary>
-      <ol>
-        <li>Press <kbd>Y=</kbd> and type the function. Press <kbd>GRAPH</kbd>.</li>
-        <li>Press <kbd>2nd</kbd> <kbd>TRACE</kbd> to open <b>CALC</b>.</li>
-        <li>Choose <b>2: zero</b>, <b>3: minimum</b>, or <b>4: maximum</b>.</li>
-        <li><b>Left Bound?</b> Move the cursor to the left of the point and press <kbd>ENTER</kbd>.</li>
-        <li><b>Right Bound?</b> Move to the right of the point and press <kbd>ENTER</kbd>.</li>
-        <li><b>Guess?</b> Move near the point and press <kbd>ENTER</kbd>.</li>
-        <li>Round the <i>X</i> and <i>Y</i> values to the nearest hundredth.</li>
-      </ol>
-      <p class="hint">The <b>Calculator</b> buttons under the graph work the same way.</p>
     </details>
   </div>
 </div>
+
 </section>
 
 <!-- ======================= PRACTICE ======================= -->
@@ -597,7 +525,7 @@ class GraphView {
   bindToolbar() {
     const r = this.root;
     r.querySelectorAll('.calc-btn').forEach(b => b.addEventListener('click', () => this.startCalc(b.dataset.kind)));
-    r.querySelector('.calc-cancel').addEventListener('click', () => this.cancelCalc());
+    r.querySelector('.calc-cancel')?.addEventListener('click', () => this.cancelCalc());
     r.querySelector('.zoom-in').addEventListener('click', () => this.zoom(1 / 1.5));
     r.querySelector('.zoom-out').addEventListener('click', () => this.zoom(1.5));
     r.querySelector('.fit').addEventListener('click', () => { this.fit(); this.draw(); });
@@ -617,7 +545,7 @@ class GraphView {
   /* ---------- calculator tool ---------- */
   setCalcButtons() {
     this.root.querySelectorAll('.calc-btn').forEach(b => b.setAttribute('aria-pressed', String(!!this.calc && this.calc.kind === b.dataset.kind)));
-    this.root.querySelector('.calc-cancel').hidden = !this.calc;
+    { const cc = this.root.querySelector('.calc-cancel'); if (cc) cc.hidden = !this.calc; }
   }
   showStatus(html, cls = '') { this.statusEl.innerHTML = html; this.statusEl.className = 'status' + (cls ? ' ' + cls : ''); }
   startCalc(kind) {
@@ -856,12 +784,10 @@ tabs.explore.onclick = () => showTab('explore');
 tabs.practice.onclick = () => showTab('practice');
 
 /* ================================================================
-   EXPLORE
+   Type an equation → graph + key features
    ================================================================ */
-const MAX_DEG = 5;
 const MAX_TYPED_DEG = 8;
 
-/* Parse a typed polynomial into coefficients [a0, a1, ...]. Throws Error with a student-friendly message. */
 function parsePoly(src) {
   let s = String(src)
     .replace(/[−–—]/g, '-').replace(/[·×∙]/g, '*').replace(/÷/g, '/')
@@ -963,74 +889,6 @@ function parsePoly(src) {
   if (!c.every(isFinite)) throw new Error('Those numbers are too large.');
   return c;
 }
-const PRESETS = [
-  { label: 'x³ − 4x · 3 zeros, 2 turning points', a: 1, zeros: [[-2, 1], [0, 1], [2, 1]] },
-  { label: '(x + 2)(x − 1)² · a zero that bounces', a: 1, zeros: [[-2, 1], [1, 2]] },
-  { label: 'x⁴ − 5x² + 4 · 4 zeros, 3 turning points', a: 1, zeros: [[-2, 1], [-1, 1], [1, 1], [2, 1]] },
-  { label: '−¼(x+3)(x+1)(x−1)(x−3) · two relative maximums', a: -0.25, zeros: [[-3, 1], [-1, 1], [1, 1], [3, 1]] },
-  { label: '(x + 3)(x² + 1) · 1 zero, but 2 turning points', a: 1, zeros: [[-3, 1]], quad: true },
-  { label: 'x(x² + 1) · 1 zero, no turning points', a: 1, zeros: [[0, 1]], quad: true },
-  { label: 'x³ · no turning points at all', a: 1, zeros: [[0, 3]] },
-  { label: 'x⁴ · 1 turning point', a: 1, zeros: [[0, 4]] },
-  { label: '−(x + 1)(x − 2)(x − 3) · negative leading coefficient', a: -1, zeros: [[-1, 1], [2, 1], [3, 1]] },
-];
-const E = {
-  mode: 'F',
-  F: { a: 1, zeros: [{ x: -2, m: 1 }, { x: 0, m: 1 }, { x: 2, m: 1 }], quad: false },
-  S: [0, -4, 0, 1, 0, 0], // a0..a5
-  T: { text: '', c: null },
-  done: new Set(),
-};
-const eRoot = document.getElementById('eGraphCard');
-const eView = new GraphView(document.getElementById('eCanvas'), eRoot, {
-  defaultStatus: 'Hover or tap the graph to trace it. To find an exact zero, maximum, or minimum, press a <b>Calculator</b> button.',
-  drag: {
-    xs: () => (E.mode === 'F' ? E.F.zeros.map(z => z.x) : []),
-    move: (i, x) => {
-      if (E.F.zeros[i].x === x) return;
-      E.F.zeros[i].x = x;
-      const inp = document.querySelector(`#zeroList input[data-i="${i}"]`); if (inp) inp.value = x;
-      refresh({ list: false });
-    },
-    end: () => { eView.fit(false); eView.draw(); },
-  },
-});
-
-const sel = document.getElementById('preset');
-sel.innerHTML = '<option value="">Choose…</option>' + PRESETS.map((p, i) => `<option value="${i}">${p.label}</option>`).join('');
-sel.onchange = () => {
-  const p = PRESETS[+sel.value]; if (!p) return;
-  E.F = { a: p.a, zeros: p.zeros.map(([x, m]) => ({ x, m })), quad: !!p.quad };
-  setMode('F', true); refresh({ fit: true });
-  sel.value = '';
-};
-
-function setMode(m, silent) {
-  if (m === 'S' && E.mode === 'F') {
-    const c = expandF(E.F); E.S = [0, 0, 0, 0, 0, 0].map((_, i) => tidy(Math.round((c[i] || 0) * 1e9) / 1e9));
-  }
-  if (m === 'T' && E.mode !== 'T' && !E.T.c) {
-    const c = E.mode === 'F' ? expandF(E.F) : E.S;
-    E.T.c = Poly.trim(c.map(v => tidy(Math.round((v || 0) * 1e9) / 1e9)));
-    E.T.text = plainPoly(E.T.c);
-    eqInput.value = E.T.text;
-  }
-  E.mode = m;
-  document.getElementById('modeF').setAttribute('aria-pressed', String(m === 'F'));
-  document.getElementById('modeS').setAttribute('aria-pressed', String(m === 'S'));
-  document.getElementById('panelF').hidden = m !== 'F';
-  document.getElementById('panelS').hidden = m !== 'S';
-  document.getElementById('panelT').hidden = m !== 'T';
-  document.getElementById('modeT').setAttribute('aria-pressed', String(m === 'T'));
-  if (!silent) refresh({ fit: true });
-  if (m === 'T' && !silent) eqInput.focus();
-}
-document.getElementById('modeF').onclick = () => setMode('F');
-document.getElementById('modeS').onclick = () => setMode('S');
-document.getElementById('modeT').onclick = () => setMode('T');
-
-// typed equation
-const eqInput = document.getElementById('eqInput'), eqMsg = document.getElementById('eqMsg');
 function plainPoly(c) {
   let out = '';
   for (let i = c.length - 1; i >= 0; i--) {
@@ -1041,90 +899,6 @@ function plainPoly(c) {
   }
   return out || '0';
 }
-function graphTyped() {
-  const text = eqInput.value;
-  try {
-    const c = parsePoly(text);
-    E.T = { text, c };
-    const n = c.length - 1;
-    eqMsg.className = 'fb';
-    eqMsg.innerHTML = n === 0
-      ? 'That is a constant (degree 0): a flat line with no turning points.'
-      : `Graphed a degree ${n} polynomial.`;
-    refresh({ fit: true });
-  } catch (err) {
-    eqMsg.className = 'fb wrong';
-    eqMsg.textContent = err.message;
-  }
-}
-document.getElementById('eqForm').onsubmit = e => { e.preventDefault(); graphTyped(); };
-
-// leading coefficient
-const aSlider = document.getElementById('aSlider'), aOut = document.getElementById('aOut');
-aSlider.oninput = () => {
-  let v = +aSlider.value;
-  if (v === 0) { v = E.F.a > 0 ? -0.25 : 0.25; aSlider.value = v; }
-  E.F.a = v; refresh({ list: false });
-};
-
-function renderZeroList() {
-  const deg = degF(E.F);
-  document.getElementById('zeroList').innerHTML = E.F.zeros.map((z, i) => `
-    <div class="zrow">
-      <span class="fac">${factoredHTML({ a: 1, zeros: [z], quad: false })}</span>
-      <label>zero at <i>x</i> = <input type="number" step="0.5" min="-20" max="20" value="${z.x}" data-i="${i}" aria-label="Zero ${i + 1}"></label>
-      <span class="seg" role="group" aria-label="Multiplicity of zero ${i + 1}" title="How many times this factor repeats (its exponent)">
-        ${[1, 2, 3].map(m => `<button data-i="${i}" data-m="${m}" aria-pressed="${z.m === m}" ${m !== z.m && deg - z.m + m > MAX_DEG ? 'disabled' : ''} title="Multiplicity ${m}" aria-label="Multiplicity ${m}">×${m}</button>`).join('')}
-      </span>
-      <button class="x" data-del="${i}" aria-label="Remove this zero" ${E.F.zeros.length <= 1 ? 'disabled' : ''}>✕</button>
-    </div>`).join('');
-  document.getElementById('addZero').disabled = deg >= MAX_DEG;
-  const qb = document.getElementById('quadBox');
-  qb.checked = E.F.quad; qb.disabled = !E.F.quad && deg + 2 > MAX_DEG;
-  document.getElementById('degNote').textContent = `Degree ${deg} (max ${MAX_DEG}). ×1, ×2, ×3 set how many times a factor repeats (its multiplicity).`;
-}
-document.getElementById('zeroList').addEventListener('input', e => {
-  const i = e.target.dataset.i; if (i == null || e.target.type !== 'number') return;
-  const v = parseFloat(e.target.value); if (!isFinite(v)) return;
-  E.F.zeros[i].x = Math.max(-20, Math.min(20, v));
-  e.target.closest('.zrow').querySelector('.fac').innerHTML = factoredHTML({ a: 1, zeros: [E.F.zeros[i]], quad: false });
-  refresh({ list: false });
-});
-document.getElementById('zeroList').addEventListener('change', () => refresh({ fit: true, list: false }));
-document.getElementById('zeroList').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.del != null) { E.F.zeros.splice(+b.dataset.del, 1); refresh({ fit: true }); }
-  else if (b.dataset.m) { E.F.zeros[+b.dataset.i].m = +b.dataset.m; refresh({ fit: true }); }
-});
-document.getElementById('addZero').onclick = () => {
-  const used = E.F.zeros.map(z => z.x);
-  const x = [3, -3, 1, -1, 4, -4, 0, 2, -2, 5, -5].find(v => !used.includes(v)) ?? 0;
-  E.F.zeros.push({ x, m: 1 }); refresh({ fit: true });
-};
-document.getElementById('quadBox').onchange = e => { E.F.quad = e.target.checked; refresh({ fit: true }); };
-
-// standard form inputs
-const coefGrid = document.getElementById('coefGrid');
-function renderCoefGrid() {
-  let h = '';
-  for (let i = 5; i >= 0; i--) {
-    h += `<span style="white-space:nowrap"><input type="number" step="any" value="${E.S[i]}" data-p="${i}" aria-label="Coefficient of x to the ${i}">${xPow(i)}${i ? ' +' : ''}</span>`;
-  }
-  coefGrid.innerHTML = h;
-}
-coefGrid.addEventListener('input', e => {
-  const p = e.target.dataset.p; if (p == null) return;
-  const v = parseFloat(e.target.value); E.S[+p] = isFinite(v) ? v : 0;
-  refresh({ fit: true, grid: false });
-});
-
-// layer toggles
-const layerMap = { lyZeros: 'zeros', lyTurning: 'turning', lyColors: 'colors', lyLabels: 'labels' };
-for (const [id, key] of Object.entries(layerMap)) {
-  document.getElementById(id).onchange = e => { eView.layers[key] = e.target.checked; eView.draw(); };
-}
-document.getElementById('lySummary').onchange = e => { document.getElementById('summaryCard').hidden = !e.target.checked; };
-
 function intervalText(list) {
   if (!list.length) return 'nowhere';
   return list.map(([a, b]) => `(${a === -Infinity ? MINUS + '∞' : fmt(a)}, ${b === Infinity ? '∞' : fmt(b)})`).join(' and ');
@@ -1151,43 +925,26 @@ function renderSummary(I) {
     </ul>`;
 }
 
-const CHALLENGES = [
-  { t: 'Make a cubic (degree 3) with exactly <b>2</b> real zeros.', ok: I => I.n === 3 && I.zeros.length === 2 },
-  { t: 'Make a cubic with <b>no</b> turning points.', ok: I => I.n === 3 && I.turning.length === 0 },
-  { t: 'Make a cubic with only <b>1</b> real zero but <b>2</b> turning points.', ok: I => I.n === 3 && I.zeros.length === 1 && I.turning.length === 2 },
-  { t: 'Make a degree 4 function with only <b>1</b> turning point.', ok: I => I.n === 4 && I.turning.length === 1 },
-  { t: 'Make a degree 4 function with <b>two relative maximums</b>.', ok: I => I.n === 4 && I.turning.filter(t => t.type === 'max').length === 2 },
-  { t: 'Make a graph with a relative minimum that sits <b>on</b> the <i>x</i>-axis.', ok: I => I.turning.some(t => t.type === 'min' && t.y === 0) },
-  { t: 'Make a degree 5 function with <b>4</b> turning points.', ok: I => I.n === 5 && I.turning.length === 4 },
-];
-function renderChallenges(I) {
-  CHALLENGES.forEach((c, i) => { if (c.ok(I)) E.done.add(i); });
-  document.getElementById('challenges').innerHTML = CHALLENGES.map((c, i) =>
-    `<li class="${E.done.has(i) ? 'done' : ''}"><span class="box" aria-label="${E.done.has(i) ? 'done' : 'not done yet'}">${E.done.has(i) ? '✓' : ''}</span><span class="t">${c.t}</span></li>`).join('');
-}
-
-function refresh({ fit = false, list = true, grid = true } = {}) {
-  let c;
-  if (E.mode === 'F') {
-    c = expandF(E.F);
-    aSlider.value = E.F.a; aOut.textContent = fmt(E.F.a);
-    if (list) renderZeroList();
-    document.getElementById('eEq').innerHTML = `<i>f</i>(<i>x</i>) = ${factoredHTML(E.F)}`;
-    document.getElementById('eEq2').innerHTML = `Standard form: <span><i>f</i>(<i>x</i>) = ${standardHTML(c)}</span>`;
-  } else if (E.mode === 'T') {
-    c = E.T.c || [0, -4, 0, 1];
+const eView = new GraphView(document.getElementById('eCanvas'), document.getElementById('eGraphCard'), {
+  defaultStatus: 'Hover or tap the graph to trace it.',
+});
+const eqInput = document.getElementById('eqInput'), eqMsg = document.getElementById('eqMsg');
+function graphTyped() {
+  try {
+    const c = parsePoly(eqInput.value);
+    eqMsg.className = 'fb';
+    eqMsg.textContent = '';
     document.getElementById('eEq').innerHTML = `<i>f</i>(<i>x</i>) = ${standardHTML(c)}`;
-    document.getElementById('eEq2').innerHTML = '';
-  } else {
-    c = E.S.slice();
-    if (grid) renderCoefGrid();
-    document.getElementById('eEq').innerHTML = `<i>f</i>(<i>x</i>) = ${standardHTML(c)}`;
-    document.getElementById('eEq2').innerHTML = '';
+    eView.setPoly(c, { fit: true });
+    renderSummary(eView.info);
+  } catch (err) {
+    eqMsg.className = 'fb wrong';
+    eqMsg.textContent = err.message;
   }
-  eView.setPoly(c, { fit });
-  renderSummary(eView.info);
-  renderChallenges(eView.info);
 }
+document.getElementById('eqForm').onsubmit = e => { e.preventDefault(); graphTyped(); };
+graphTyped();
+eView.updateReadout();
 
 /* ================================================================
    PRACTICE
@@ -1392,9 +1149,8 @@ function checkQ(id) {
 }
 
 /* ---------- start ---------- */
-renderCoefGrid();
-refresh({ fit: true });
-eView.updateReadout();
+
+
 </script>
 </body>
 </html>
